@@ -8,7 +8,7 @@ BioHacks 2026 (McMaster, 7–8 Nov 2026), **Detection and Diagnostics** track. D
 
 Demo path: `docs/DEMO.md`. Every feature must serve a step there.
 
-> Open decision (see Decisions log): the team brainstorm also proposed a home motion/voice app plus a biofluid test strip. Not built. Do not start it without the lead's go-ahead.
+> Direction (see Decisions log, 2026-11-07): build ALS RedFlag only. The brainstorm's motion/fatigue test (`Biohack- LBMP.md`) is a stretch goal, only after `app.py` and `evaluate.py` work. The biofluid strip is a one-line slide, never built.
 
 ## Stack and commands
 
@@ -74,7 +74,7 @@ Edit only with the owner's OK, and say so in the PR:
 
 ## Context files (local, not in git)
 
-`context/` holds the BioHacks case PDF (Alex's notes pp. 7-15, rubric p. 20), the original brainstorm `Biohack- LBMP.md` (strip + home app, both dropped) and session handoffs. Read them when you need case facts; never commit them.
+`context/` holds the BioHacks case PDF (Alex's notes pp. 7-15, rubric p. 20), the original brainstorm `Biohack- LBMP.md` (strip never built; motion/fatigue test is a stretch goal only, see Decisions log) and session handoffs. Read them when you need case facts; never commit them.
 
 ## Decisions log
 
@@ -84,4 +84,4 @@ Edit only with the owner's OK, and say so in the PR:
 | 2026-11-07 | Build ALS RedFlag (notes → findings → rules → timeline) on `main` | Targets Alex's real failure: clinicians each saw part of the pattern |
 | 2026-11-07 | Default model `gemini-3.5-flash`, low thinking | ~2 s per note vs ~3 min on 3.8-flash, same findings (per commit dfe201b) |
 | 2026-11-07 | README "flagged December 2024, ~19 months" claim is **not verified** | Offline run on Alex's notes: first HIGH 2026-02-10 (5.1 months before diagnosis). Perfect extraction would give 2025-04-21 (~15 months). Re-measure with Gemini before using any number |
-| <date> | Open: keep RedFlag only, or add the brainstorm's motion/voice test? | <decision> |
+| 2026-11-07 | Direction A: build ALS RedFlag only. Motion/fatigue test from the brainstorm is a stretch goal, only after `app.py` and `evaluate.py` work. Biofluid strip is a one-line slide, never built | Avoids splitting the remaining hours across three builds; strip has no wet lab and uncertain lateral-flow sensitivity (pg/mL vs ng/mL marker, general-population PPV ~0.1%) |
