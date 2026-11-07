@@ -1,9 +1,0 @@
-Pulmonary Function Laboratory
-Spirometry, upright and supine
-18 June 2026
-Alex Chen
-
-Forced vital capacity, sitting: 78 per cent of predicted (reference above 80 per cent)
-Forced vital capacity, lying flat: 64 per cent of predicted (reference within 10 per cent of the sitting value)
-Sniff nasal inspiratory pressure: 52 cm H2O (reference above 70 cm H2O)
-Comment: the fall in vital capacity on lying flat indicates diaphragm weakness.
