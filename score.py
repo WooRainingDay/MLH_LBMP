@@ -99,6 +99,12 @@ def score(findings: dict, rules: Optional[dict] = None) -> dict:
             points += r["points"]
             reasons.append((r["points"], r["why"]))
 
+    # "If it's progressive and doesn't fit - refer": motor loss that the nerve tests don't explain
+    if has_weakness and findings.get("wasting") and findings.get("normal_sensory_nerve_tests") \
+            and findings.get("sensory_symptoms") is not True:
+        points += rules.get("unexplained_points", 0)
+        reasons.append((rules.get("unexplained_points", 0), rules.get("unexplained_why", "")))
+
     regions = body_regions(findings.get("weakness_regions") or [])
     if findings.get("speech_or_swallow_change") and "bulbar" not in regions:
         regions.append("bulbar")

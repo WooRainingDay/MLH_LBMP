@@ -1,23 +1,32 @@
 {
-  "_comment": "Red-flag rules for score.py. PLACEHOLDER weights by Peter; Mia replaces these with her rules (Gold Coast criteria + ReferALS). Edit numbers and wording here, no code changes needed. 'when' is the finding's value that earns the points (true or false).",
+  "_comment": "Red-flag rules for score.py. Written from the Gold Coast criteria (Shefner 2020) and the red flags of ALS Canada's ReferALS tool as summarised in the R.A.C.E. to Diagnose ALS/MND handout. Frozen before any test case was seen. Edit numbers and wording here, no code changes needed. 'when' is the finding's value that earns the points (true or false).",
+
+  "_sources": [
+    "Shefner JM et al. A proposal for new diagnostic criteria for ALS (Gold Coast criteria). Clin Neurophysiol 2020;131:1975-1978.",
+    "ALS Canada. ReferALS early referral tool. als.ca/resource/referals-early-referral-tool",
+    "R.A.C.E. to Diagnose ALS/MND participant handout (adapted from ReferALS): 'If it's progressive and doesn't fit - REFER'; 'progressive, painless loss of function'. als-mnd.org"
+  ],
 
   "risk_thresholds": { "high": 10, "medium": 5 },
 
   "rules": [
-    { "field": "painless",                    "when": true,  "points": 2,  "why": "Weakness is painless" },
-    { "field": "sensory_symptoms",            "when": false, "points": 1,  "why": "No numbness or tingling" },
-    { "field": "sensory_symptoms",            "when": true,  "points": -2, "why": "Numbness or tingling points to a nerve or root problem instead" },
-    { "field": "wasting",                     "when": true,  "points": 2,  "why": "Muscle wasting" },
-    { "field": "fasciculations",              "when": true,  "points": 1,  "why": "Fasciculations (muscle twitching)" },
+    { "field": "painless",                    "when": true,  "points": 2,  "why": "Weakness is painless (ReferALS: 'progressive, painless loss of function')" },
+    { "field": "sensory_symptoms",            "when": false, "points": 1,  "why": "No numbness or tingling (ALS spares sensation)" },
+    { "field": "sensory_symptoms",            "when": true,  "points": -3, "why": "Numbness or tingling points to a nerve or root problem instead" },
+    { "field": "wasting",                     "when": true,  "points": 2,  "why": "Muscle wasting (lower motor neuron sign)" },
+    { "field": "fasciculations",              "when": true,  "points": 2,  "why": "Fasciculations, visible twitching (lower motor neuron sign)" },
     { "field": "cramps",                      "when": true,  "points": 1,  "why": "Muscle cramps" },
     { "field": "brisk_reflexes",              "when": true,  "points": 2,  "why": "Brisk reflexes (upper motor neuron sign)" },
-    { "field": "upgoing_plantar_or_hoffmann", "when": true,  "points": 2,  "why": "Up-going plantar or Hoffmann sign (upper motor neuron sign)" },
+    { "field": "upgoing_plantar_or_hoffmann", "when": true,  "points": 3,  "why": "Up-going plantar or Hoffmann sign (upper motor neuron sign)" },
     { "field": "normal_sensory_nerve_tests",  "when": true,  "points": 2,  "why": "Sensory nerves test normal despite weakness" },
-    { "field": "failed_local_treatment",      "when": true,  "points": 2,  "why": "No improvement after local treatment" },
-    { "field": "weight_loss",                 "when": true,  "points": 1,  "why": "Unintentional weight loss" },
-    { "field": "speech_or_swallow_change",    "when": true,  "points": 3,  "why": "Speech or swallowing change (bulbar sign)" },
-    { "field": "breathing_change",            "when": true,  "points": 2,  "why": "Breathing change" }
+    { "field": "failed_local_treatment",      "when": true,  "points": 3,  "why": "Getting worse despite treatment for a local cause" },
+    { "field": "weight_loss",                 "when": true,  "points": 2,  "why": "Unintentional weight loss" },
+    { "field": "speech_or_swallow_change",    "when": true,  "points": 3,  "why": "Speech or swallowing change (bulbar red flag)" },
+    { "field": "breathing_change",            "when": true,  "points": 3,  "why": "Breathing change, e.g. short of breath lying flat (respiratory red flag)" }
   ],
+
+  "unexplained_points": 3,
+  "unexplained_why": "Doesn't fit: weakness and wasting with normal sensory nerve tests, so carpal tunnel or a pinched nerve does not explain it",
 
   "spread_points": 3,
   "spread_why": "Weakness has spread to a second region",
@@ -28,8 +37,8 @@
   "_gold_coast": "Risk is 'high' whatever the points if: UMN sign (brisk reflexes / up-going plantar / Hoffmann) AND LMN sign (wasting / fasciculations) AND getting worse (spread or failed local treatment).",
 
   "advice": {
-    "high":   "Urgent referral to neurology (ALS / motor neuron disease clinic) recommended. Ask for EMG if not done. Do not wait for more local treatment trials.",
-    "medium": "Possible early pattern. Re-examine in 4 to 6 weeks; refer to neurology if weakness spreads, wasting appears, or treatment does not help.",
+    "high":   "Refer to neurology (ALS / motor neuron disease clinic) now. Write 'progressive, painless loss of function' on the referral. Do not wait for more tests or treatment trials.",
+    "medium": "Possible early pattern. Re-examine within 4 to 6 weeks; refer to neurology if weakness spreads, wasting appears, or treatment does not help.",
     "low":    "No ALS red-flag pattern in these notes."
   }
 }
