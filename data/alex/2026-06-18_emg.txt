@@ -1,0 +1,23 @@
+Electromyography Laboratory
+Nerve conduction studies and needle EMG
+18 June 2026
+Alex Chen
+Requested by: Dr. H. Weiss-Okafor
+
+Nerve conduction studies
+Right median motor, to thumb muscles: amplitude 1.6 mV, latency and velocity normal (reference amplitude above 4.0 mV)
+Right ulnar motor, to little-finger muscles: amplitude 5.5 mV, velocity normal, no conduction block (reference amplitude above 6.0 mV)
+Right peroneal motor, to foot: amplitude 0.9 mV, velocity normal (reference amplitude above 2.0 mV)
+Left median and ulnar motor: amplitudes at lower limit of normal
+Sensory studies, median, ulnar, sural, both sides: all normal
+
+Needle electromyography
+Bulbar (tongue): fasciculation potentials, fibrillations, enlarged motor units
+Cervical (right first dorsal interosseous, right biceps, left deltoid): fibrillations and positive sharp waves, fasciculations, large polyphasic motor units with reduced recruitment, right more than left
+Thoracic (right T9 paraspinal): fibrillations, fasciculations
+Lumbosacral (right tibialis anterior, right vastus lateralis, left gastrocnemius): active denervation and chronic reinnervation in all three; severely reduced recruitment in tibialis anterior
+
+Summary
+Widespread active denervation and chronic reinnervation in four body regions, including clinically unaffected muscles, with normal sensory conduction and no conduction block. There is no electrophysiological evidence of a peripheral neuropathy, a disorder of the neuromuscular junction, or a myopathy.
+
+Dr. Hannah Weiss-Okafor, MD, FRCPC
