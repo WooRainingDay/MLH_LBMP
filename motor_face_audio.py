@@ -33,7 +33,13 @@ RIGHT_LIP_CORNER = 291
 def _ensure_model() -> Path:
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     if not MODEL_PATH.exists():
-        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+        try:
+            urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+        except OSError as e:
+            raise RuntimeError(
+                f"Could not download the MediaPipe face model ({MODEL_URL}). "
+                "Run this once with network access before judging to warm the cache."
+            ) from e
     return MODEL_PATH
 
 

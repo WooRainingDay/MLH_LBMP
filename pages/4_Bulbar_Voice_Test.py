@@ -30,7 +30,11 @@ if video is not None:
         video_path = tmp.name
 
     with st.spinner("Tracking lip landmarks..."):
-        face_samples = load_face_landmarks(video_path)
+        try:
+            face_samples = load_face_landmarks(video_path)
+        except RuntimeError as e:
+            st.error(str(e))
+            st.stop()
     lip_result = lip_velocity(face_samples)
 
     if lip_result["mean_velocity"] is None:

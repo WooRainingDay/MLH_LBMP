@@ -29,7 +29,11 @@ if uploaded is not None:
         video_path = tmp.name
 
     with st.spinner("Tracking hand landmarks..."):
-        samples = load_hand_landmarks(video_path)
+        try:
+            samples = load_hand_landmarks(video_path)
+        except RuntimeError as e:
+            st.error(str(e))
+            st.stop()
     result = tap_rhythm(samples)
 
     if not result["intervals_ms"]:
