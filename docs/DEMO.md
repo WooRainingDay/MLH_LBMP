@@ -6,7 +6,7 @@ Target length: **3 minutes** at the judging table (Sun 1:30–3:00 PM, MCCD 7110
 
 | | URL |
 |---|---|
-| Live | <prod URL> |
+| Live | http://108.61.193.162:8501 |
 | Backup (local) | `streamlit run app.py` → http://localhost:8501 |
 | Backup (no network, no key) | `python timeline.py data/alex --offline --diagnosis=2026-07-14` |
 | Devpost | https://biohacksmcmaster.devpost.com |
