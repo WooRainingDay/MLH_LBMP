@@ -70,7 +70,7 @@ Edit only with the owner's OK, and say so in the PR:
 5. Track work in `docs/TASKS.md`.
 6. To work through tasks with self-review, use the **redflag-loop** skill (machine-checkable acceptance, independent judge, max 3 rounds, user approves plan and merge). Never loop on a task without an acceptance command.
 7. Before anything reaches judges (README, Devpost, slides, UI text): run the **claim-check** skill.
-8. Optional ECC skills (MIT, `.claude/skills/`): `loop-design-check` (design or review a loop), `santa-method` (dual independent review), `parallel-execution-optimizer` (split work into lanes), `scientific-db-pubmed-database` (citations), `ui-demo` (backup demo video; Streamlit runs on port 8501, not 3000), `frontend-slides` (pitch slides).
+8. Optional, only if you have the ECC plugin installed: /ecc:loop-design-check, /ecc:santa-method, /ecc:parallel-execution-optimizer, /ecc:scientific-db-pubmed-database, /ecc:ui-demo, /ecc:frontend-slides. Nothing in our workflow depends on them.
 
 ## Context files (local, not in git)
 
