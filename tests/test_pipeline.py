@@ -72,3 +72,16 @@ def test_real_carpal_tunnel_nerve_test_is_not_normal():
                         "with slowing across the carpal tunnel.")
     assert f["normal_sensory_nerve_tests"] is False
     assert score(f)["risk"] == "low"
+
+
+def test_gemini_failure_falls_back_to_keywords(monkeypatch):
+    import extract
+
+    def boom(note):
+        raise extract.QuotaExhausted("429 RESOURCE_EXHAUSTED GenerateRequestsPerDayPerProjectPerModel")
+
+    monkeypatch.setattr(extract, "has_gemini", lambda: True)
+    monkeypatch.setattr(extract, "extract_gemini", boom)
+    monkeypatch.setattr(extract, "_gemini_down", False)
+    f = extract.extract_findings("Weak right hand. Sensation intact.")
+    assert f["weakness_regions"] == ["right hand"] and extract.last_extractor == "keywords"

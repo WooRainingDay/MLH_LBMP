@@ -33,6 +33,12 @@ THINKING = os.getenv("GEMINI_THINKING", "low")  # "" to use the model default
 MIN_SECONDS_BETWEEN_CALLS = float(os.getenv("GEMINI_MIN_INTERVAL", "7"))  # free tier
 CACHE_DIR = Path(__file__).parent / ".cache" / "extract"
 _last_call = 0.0
+_gemini_down = False   # set after a failed call; the rest of the run uses keywords
+last_extractor = None  # "gemini" or "keywords": what produced the most recent findings
+
+
+class QuotaExhausted(RuntimeError):
+    pass
 
 
 def _api_key() -> str | None:
@@ -100,6 +106,8 @@ def extract_gemini(note: str, retries: int = 4) -> dict:
             break
         except Exception as e:  # rate limit / server hiccup -> back off and retry
             msg = str(e)
+            if "PerDay" in msg or "per day" in msg:   # daily quota gone: retrying for hours won't help
+                raise QuotaExhausted(msg[:300]) from e
             transient = any(s in msg for s in ("429", "RESOURCE_EXHAUSTED", "500", "503", "UNAVAILABLE", "deadline"))
             if attempt == retries or not transient:
                 raise
@@ -246,10 +254,32 @@ def extract_offline(note: str) -> dict:
 
 
 def extract_findings(note_text: str, offline: bool | None = None) -> dict:
-    """Main entry point. offline=None: use Gemini if a key is set, else keywords."""
-    if offline is None:
-        offline = not has_gemini()
-    return extract_offline(note_text) if offline else extract_gemini(note_text)
+    """Main entry point. offline=None: use Gemini if a key is set, else keywords.
+
+    With offline=None a Gemini failure (quota gone, network down) falls back to keywords
+    instead of crashing the app; a warning goes to stderr and last_extractor says which ran.
+    offline=False forces Gemini and raises on failure.
+    """
+    global _gemini_down, last_extractor
+    auto = offline is None
+    if auto:
+        offline = not has_gemini() or (_gemini_down and not _cache_path(note_text).exists())
+    if offline:
+        last_extractor = "keywords"
+        return extract_offline(note_text)
+    try:
+        out = extract_gemini(note_text)
+    except Exception as e:
+        if not auto:
+            raise
+        if not _gemini_down:
+            print(f"[extract] Gemini unavailable, using keyword fallback for the rest of this run: {str(e)[:150]}",
+                  file=sys.stderr)
+        _gemini_down = True
+        last_extractor = "keywords"
+        return extract_offline(note_text)
+    last_extractor = "gemini"
+    return out
 
 
 SAMPLE_NOTE = """Referral, 14 October 2024. Mountain Brow Family Health Team.
