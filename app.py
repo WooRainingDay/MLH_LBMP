@@ -6,16 +6,19 @@ Supports clinical decisions; it does not diagnose.
 """
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 import streamlit as st
 
+from elevenlabs_alert import generate_alert
 from score import load_rules
 from timeline import first_flag, months_between, run_timeline
 
 DATA_DIR = Path(__file__).parent / "data"
-DEFAULT_DIAGNOSIS = "2026-07-14"
+DEFAULT_DIAGNOSIS = date(2026, 7, 14)
 RISK_COLOR = {"low": "green", "medium": "orange", "high": "red"}
+RISK_ICON = {"low": "✅", "medium": "⚠️", "high": "🚩"}
 
 st.set_page_config(page_title="ALS RedFlag", page_icon="🧠")
 
@@ -34,7 +37,8 @@ patients = sorted(p.name for p in DATA_DIR.iterdir() if p.is_dir() and any(p.glo
 st.sidebar.title("ALS RedFlag")
 patient = st.sidebar.selectbox("Patient notes", patients, index=patients.index("alex") if "alex" in patients else 0)
 offline = st.sidebar.toggle("Offline mode (no Gemini key spent)", value=True)
-diagnosis = st.sidebar.text_input("Diagnosis date (for months-before calc)", DEFAULT_DIAGNOSIS)
+diagnosis_date = st.sidebar.date_input("Diagnosis date (for months-before calc)", DEFAULT_DIAGNOSIS)
+diagnosis = diagnosis_date.isoformat() if diagnosis_date else None
 st.sidebar.caption("Supports clinical decisions. It does not diagnose.")
 
 notes_dir = DATA_DIR / patient
@@ -56,6 +60,11 @@ if flag and flag["date"]:
         for reason in flag["reasons"]:
             st.markdown(f"- {reason}")
         st.info(rules["advice"]["high"])
+
+    alert_audio = generate_alert(flag["date"], months, flag["gold_coast"])
+    if alert_audio is not None:
+        st.audio(alert_audio, format="audio/mp3", autoplay=True)
+        st.caption("The call that never came - played aloud, same numbers as the banner above.")
 else:
     st.success("Never reached HIGH risk in this note set.", icon="✅")
 
@@ -66,7 +75,8 @@ for step in steps:
     label = f"{step['date'] or '?'} — {step['file']}"
     with st.expander(label, expanded=(step is flag)):
         color = RISK_COLOR.get(step["risk"], "gray")
-        st.markdown(f":{color}[**{step['risk'].upper()}**] — {step['points']} points")
+        icon = RISK_ICON.get(step["risk"], "")
+        st.markdown(f"{icon} :{color}[**{step['risk'].upper()}**] — {step['points']} points")
         if step["new_findings"]:
             st.write("New this note: " + ", ".join(step["new_findings"]))
             for q in step["findings"].get("evidence", []):

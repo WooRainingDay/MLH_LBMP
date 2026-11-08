@@ -1,0 +1,24 @@
+[theme]
+base = "light"
+
+# Deep clinical navy — deliberately not the default Streamlit red, so red/orange/green
+# stay reserved for risk semantics (first_flag banner, per-note badges) instead of
+# doubling as the UI's generic accent color.
+primaryColor = "#1B3A6B"
+
+backgroundColor = "#F8FAFC"
+secondaryBackgroundColor = "#EEF2F6"
+textColor = "#1A2230"
+
+baseRadius = "small"
+
+# Streamlit's default red/orange/green (#ff4b4b/#ffa421/#21c354) are tuned for colored
+# *backgrounds*, not colored text on a light page — as plain text (used for the
+# clinical risk badges in app.py) they measure 1.9-3.2:1 against this background,
+# failing WCAG AA (4.5:1). These are darker shades of the same hues that pass.
+redColor = "#C9302C"
+orangeColor = "#A85A08"
+greenColor = "#1B7A3D"
+
+font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap, sans-serif"
+headingFont = "'Space Grotesk':https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap, sans-serif"

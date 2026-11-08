@@ -7,12 +7,12 @@ jitter, micro-hesitations, and rhythm degradation in a thumb-to-index tapping
 trial — upper motor neuron disinhibition can show up as rhythm degradation
 before raw strength loss is obvious.
 
-    from motor_cv import load_hand_landmarks, tap_rhythm
-    samples = load_hand_landmarks("clip.mp4")  # [(thumb_x, index_x, t_s), ...]
-    tap_rhythm(samples)
+    from motor_cv import tap_rhythm
+    tap_rhythm(samples)  # samples from extract_hand_sample(), live-camera only
 """
 from __future__ import annotations
 
+import math
 import statistics
 import urllib.request
 from pathlib import Path
@@ -25,8 +25,13 @@ MODEL_URL = (
 )
 MODEL_PATH = Path(".cache/models/hand_landmarker.task")
 
+WRIST = 0
 THUMB_TIP = 4
 INDEX_TIP = 8
+MIDDLE_MCP = 9
+# A real tap opens thumb-index by well over this (in hand-size units); landmark jitter
+# from a hand held still stays under it. ponytail: hand-tuned, not calibrated on data.
+MIN_TAP_PROMINENCE = 0.15
 
 
 def _ensure_model() -> Path:
@@ -42,19 +47,23 @@ def _ensure_model() -> Path:
     return MODEL_PATH
 
 
-def extract_hand_sample(result, timestamp_s: float) -> tuple[float, float, float] | None:
-    """Pulls (thumb_tip_x, index_tip_x, timestamp_s) out of one HandLandmarker result,
-    or None if no hand was detected this frame. Shared by the upload (file) path and the
-    live-camera path so both feed identical samples into tap_rhythm()."""
+def extract_hand_sample(result, timestamp_s: float) -> tuple[float, float] | None:
+    """Pulls (pinch_distance, timestamp_s) out of one HandLandmarker result, or None if
+    no hand was detected. pinch_distance is the 2D thumb-tip to index-tip distance divided
+    by hand size (wrist to middle knuckle), so it doesn't change with distance from the
+    camera."""
     if not result.hand_landmarks:
         return None
     hand = result.hand_landmarks[0]
-    return (hand[THUMB_TIP].x, hand[INDEX_TIP].x, timestamp_s)
+    size = math.dist((hand[WRIST].x, hand[WRIST].y), (hand[MIDDLE_MCP].x, hand[MIDDLE_MCP].y))
+    if size == 0:
+        return None
+    pinch = math.dist((hand[THUMB_TIP].x, hand[THUMB_TIP].y), (hand[INDEX_TIP].x, hand[INDEX_TIP].y))
+    return (pinch / size, timestamp_s)
 
 
 def new_landmarker(running_mode):
-    """A ready-to-use HandLandmarker for the given running_mode. Both the upload path
-    and the live-camera path use VIDEO mode (see motor_live.py)."""
+    """A ready-to-use HandLandmarker for the given running_mode (live-camera uses VIDEO)."""
     import mediapipe as mp
 
     return mp.tasks.vision.HandLandmarker.create_from_options(
@@ -66,48 +75,33 @@ def new_landmarker(running_mode):
     )
 
 
-def load_hand_landmarks(video_path: str) -> list[tuple[float, float, float]]:
-    """Returns (thumb_tip_x, index_tip_x, timestamp_s) per frame with a detected hand."""
-    import cv2
-    import mediapipe as mp
-
-    samples: list[tuple[float, float, float]] = []
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    with new_landmarker(mp.tasks.vision.RunningMode.VIDEO) as landmarker:
-        frame_idx = 0
-        while True:
-            ok, frame = cap.read()
-            if not ok:
-                break
-            timestamp_ms = int(frame_idx / fps * 1000)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            result = landmarker.detect_for_video(mp_image, timestamp_ms)
-            sample = extract_hand_sample(result, timestamp_ms / 1000)
-            if sample:
-                samples.append(sample)
-            frame_idx += 1
-    cap.release()
-    return samples
+def detect_taps(samples: list[tuple[float, float]]) -> list[float]:
+    """samples: (pinch_distance, timestamp_s) per frame, oldest first, hand-size-normalized
+    (see extract_hand_sample). A tap is a local minimum in pinch distance deep enough to
+    clear MIN_TAP_PROMINENCE — real pinch-closes swing ~0.8 of this normalized unit, while
+    landmark-tracking jitter from a hand held still stays well under the 0.15 floor.
+    Returns tap timestamps in seconds. Needs >=10 frames to be meaningful.
+    """
+    if len(samples) < 10:
+        return []
+    times = [s[1] for s in samples]
+    distances = [s[0] for s in samples]
+    peak_idx, _ = find_peaks([-d for d in distances], distance=3, prominence=MIN_TAP_PROMINENCE)
+    return [times[i] for i in peak_idx]
 
 
-def tap_rhythm(samples: list[tuple[float, float, float]]) -> dict:
-    """samples: (thumb_tip_x, index_tip_x, timestamp_s) per frame, oldest first.
-
-    A "tap" is a local minimum in thumb-index distance (fingers closing together).
-    Returns {"intervals_ms", "jitter_cv", "hesitation_count", "slope_ms_per_tap",
-    "interpretation"}.
+def tap_rhythm(samples: list[tuple[float, float]]) -> dict:
+    """samples: (pinch_distance, timestamp_s) per frame, oldest first (see
+    extract_hand_sample). Returns {"intervals_ms", "jitter_cv", "hesitation_count",
+    "slope_ms_per_tap", "interpretation"}.
     """
     if len(samples) < 10:
         return _empty("Need at least 10 frames with a detected hand.")
 
-    times = [s[2] for s in samples]
-    distances = [abs(s[0] - s[1]) for s in samples]
-    peak_idx, _ = find_peaks([-d for d in distances], distance=3)
-    if len(peak_idx) < 3:
+    tap_times = detect_taps(samples)
+    if len(tap_times) < 3:
         return _empty("Could not detect at least 3 taps in this clip.")
 
-    tap_times = [times[i] for i in peak_idx]
     intervals_ms = [(tap_times[i] - tap_times[i - 1]) * 1000 for i in range(1, len(tap_times))]
     return _score(intervals_ms)
 
@@ -136,8 +130,11 @@ def _score(intervals_ms: list[float]) -> dict:
     slope = num / den if den else 0.0
 
     # ponytail: thresholds below are an unvalidated heuristic, not a clinical cutoff
-    # (no UPDRS-style tapping norms baked in). Upgrade path: calibrate against real
-    # finger-tapping-test data before using for anything beyond an exploratory demo.
+    # (no UPDRS-style tapping norms baked in). The jitter_cv *method* is validated on
+    # real ALS gait data (ALS 0.429 vs control 0.044, research/calibrate_motor.py) -
+    # but that's stride interval, not finger tap. Upgrade path: calibrate the 0.3/15
+    # cutoffs against real finger-tapping-test data (Answer ALS / DNE-113, access
+    # pending per docs/plans/als-data-models.md) before using beyond an exploratory demo.
     flags = []
     if jitter_cv > 0.3:
         flags.append("high tap-to-tap jitter")
@@ -156,10 +153,10 @@ def _score(intervals_ms: list[float]) -> dict:
     }
 
 
-def _synthetic_samples(tap_times: list[float], fps: float = 100.0) -> list[tuple[float, float, float]]:
-    """Build a frame-level thumb-index distance signal with minima exactly at tap_times."""
-    import math
-
+def _synthetic_samples(tap_times: list[float], fps: float = 100.0) -> list[tuple[float, float]]:
+    """Build a frame-level pinch-distance signal (hand-size-normalized) with minima
+    (taps) exactly at tap_times, swinging between a closed pinch (~0.05) and an open
+    hand (~0.85) — a realistic amplitude, well above MIN_TAP_PROMINENCE."""
     n_frames = int((tap_times[-1] + 0.3) * fps)
     samples = []
     for f in range(n_frames):
@@ -167,8 +164,8 @@ def _synthetic_samples(tap_times: list[float], fps: float = 100.0) -> list[tuple
         prev_t = max((tt for tt in tap_times if tt <= t), default=tap_times[0])
         next_t = min((tt for tt in tap_times if tt >= t), default=tap_times[-1])
         phase = 0.0 if next_t == prev_t else (t - prev_t) / (next_t - prev_t)
-        distance = 0.02 + 0.02 * math.sin(math.pi * phase) ** 2
-        samples.append((0.0, distance, t))
+        pinch = 0.05 + 0.8 * math.sin(math.pi * phase) ** 2
+        samples.append((pinch, t))
     return samples
 
 
@@ -182,8 +179,15 @@ def demo() -> None:
     assert slowing["slope_ms_per_tap"] > 15, slowing
     assert "slowed" in slowing["interpretation"], slowing
 
-    too_few = tap_rhythm([(0.0, 0.0, 0.0)] * 5)
+    too_few = tap_rhythm([(0.05, 0.0)] * 5)
     assert too_few["slope_ms_per_tap"] is None, too_few
+
+    # Regression test: a hand held still (small, slow jitter well under MIN_TAP_PROMINENCE)
+    # must not register any taps.
+    jitter_only = [(0.5 + 0.05 * math.sin(2 * math.pi * f / 20), f / 100) for f in range(200)]
+    still = tap_rhythm(jitter_only)
+    assert still["slope_ms_per_tap"] is None, still
+    assert "Could not detect" in still["interpretation"], still
 
     print("motor_cv.py: all checks passed")
 

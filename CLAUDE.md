@@ -76,6 +76,24 @@ Edit only with the owner's OK, and say so in the PR:
 
 `context/` holds the BioHacks case PDF (Alex's notes pp. 7-15, rubric p. 20), the original brainstorm `Biohack- LBMP.md` (strip never built; motion/fatigue test is a stretch goal only, see Decisions log) and session handoffs. Read them when you need case facts; never commit them.
 
+## Design Context
+
+### Users
+Clinicians (GPs, neurologists) reviewing a patient's referral notes in date order, trying to spot the first point an urgent ALS referral was warranted — plus, for this build cycle, BioHacks 2026 hackathon judges seeing it live in a 2-minute demo. Both audiences need to trust the evidence shown, not just the verdict.
+
+### Brand Personality
+Modern health-tech, demo-polished. Confident typography and real color accents — not sterile medical-record gray — but never playful or mascot-y, and never a flashing/siren-style alarm. It should look like a credible product a clinic would actually deploy, that also reads well projected on a screen.
+
+### Aesthetic Direction
+Light theme only. Explicit anti-references: no generic-AI-dashboard tells (gradient text on metrics, glassmorphism, cyan/purple glow-on-dark cards, identical icon-card grids); no startup-playful mascot icons or bouncy motion. The urgent-referral moment should land with one confident, non-repeating cue (color + icon + text), not pulsing/flashing.
+
+### Design Principles
+1. Light theme, no AI-dashboard clichés (no gradient text, no glass/glow cards).
+2. Risk signal is never color-only — always pair color with an icon/shape + text label (colorblind-safe), including in the per-note expander list, not just the top banner.
+3. One confident urgent-referral moment, not sustained alarm — no flashing/pulsing, no repeated restatement of the same number.
+4. Modern/demo-polished but restrained — typography and spacing should feel like a real clinical product, not a hackathon prototype, without tipping into playful.
+5. Every exploratory/stretch page (Motor Test, CV Motor Test, Bulbar/Voice Test) stays visually distinct from the core clinical timeline so judges and clinicians never mistake "exploratory, not validated" output for a diagnosis.
+
 ## Decisions log
 
 | Date | Decision | Why / notes |

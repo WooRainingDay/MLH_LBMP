@@ -6,9 +6,9 @@ Micro-Movement & Audio Dynamics), not part of ALS RedFlag's clinical scoring
 during speech (MediaPipe FaceLandmarker) and pitch perturbation + formant
 stability in a sustained-vowel recording (librosa).
 
-    from motor_face_audio import load_face_landmarks, lip_velocity, voice_jitter_and_formants
-    lip_velocity(load_face_landmarks("speech.mp4"))
-    voice_jitter_and_formants(y, sr)  # y, sr from librosa.load(...)
+    from motor_face_audio import lip_velocity, voice_jitter_and_formants
+    lip_velocity(face_samples)  # face_samples from extract_lip_sample(), live-camera only
+    voice_jitter_and_formants(y, sr)  # y, sr from a live-captured audio array
 """
 from __future__ import annotations
 
@@ -45,8 +45,7 @@ def _ensure_model() -> Path:
 
 def extract_lip_sample(result, timestamp_s: float) -> tuple[float, float, float, float, float] | None:
     """Pulls (timestamp_s, left_corner_x, left_corner_y, right_corner_x, right_corner_y)
-    out of one FaceLandmarker result, or None if no face was detected this frame. Shared
-    by the upload (file) path and the live-camera path."""
+    out of one FaceLandmarker result, or None if no face was detected this frame."""
     if not result.face_landmarks:
         return None
     face = result.face_landmarks[0]
@@ -55,8 +54,7 @@ def extract_lip_sample(result, timestamp_s: float) -> tuple[float, float, float,
 
 
 def new_face_landmarker(running_mode):
-    """A ready-to-use FaceLandmarker for the given running_mode. Both the upload path
-    and the live-camera path use VIDEO mode (see motor_live.py)."""
+    """A ready-to-use FaceLandmarker for the given running_mode (live-camera uses VIDEO)."""
     import mediapipe as mp
 
     return mp.tasks.vision.FaceLandmarker.create_from_options(
@@ -66,32 +64,6 @@ def new_face_landmarker(running_mode):
             num_faces=1,
         )
     )
-
-
-def load_face_landmarks(video_path: str) -> list[tuple[float, float, float, float, float]]:
-    """Returns (timestamp_s, left_corner_x, left_corner_y, right_corner_x, right_corner_y)
-    per frame with a detected face."""
-    import cv2
-    import mediapipe as mp
-
-    samples: list[tuple[float, float, float, float, float]] = []
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    with new_face_landmarker(mp.tasks.vision.RunningMode.VIDEO) as landmarker:
-        frame_idx = 0
-        while True:
-            ok, frame = cap.read()
-            if not ok:
-                break
-            timestamp_ms = int(frame_idx / fps * 1000)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            result = landmarker.detect_for_video(mp_image, timestamp_ms)
-            sample = extract_lip_sample(result, timestamp_ms / 1000)
-            if sample:
-                samples.append(sample)
-            frame_idx += 1
-    cap.release()
-    return samples
 
 
 def lip_velocity(samples: list[tuple[float, float, float, float, float]]) -> dict:
@@ -139,15 +111,18 @@ def _empty_lip(reason: str) -> dict:
 def voice_jitter_and_formants(y: np.ndarray, sr: int) -> dict:
     """y, sr: a sustained-vowel recording from librosa.load(...).
 
-    Returns {"jitter_pct", "formant_stability_cv", "interpretation"}. Jitter is the mean
-    relative frame-to-frame change in pitch period (librosa.pyin). Formant stability is
-    the frame-to-frame variability of the two lowest LPC-root resonances (F1/F2 proxy).
+    Returns {"jitter_pct", "f0_sd", "formant_stability_cv", "interpretation"}. Jitter is the
+    mean relative frame-to-frame change in pitch period (librosa.pyin). f0_sd is the pitch
+    standard deviation in Hz, the strongest single ALS discriminator in the VOC-ALS study
+    (research/voice_features.py). Formant stability is the frame-to-frame variability of the
+    two lowest LPC-root resonances (F1/F2 proxy).
     """
     f0, voiced_flag, _ = librosa.pyin(y, sr=sr, fmin=librosa.note_to_hz("C2"), fmax=librosa.note_to_hz("C7"))
     voiced_f0 = f0[voiced_flag]
     if len(voiced_f0) < 5:
         return _empty_voice("Not enough sustained voiced sound detected in this clip.")
 
+    f0_sd = float(np.std(voiced_f0))
     diffs = np.abs(np.diff(voiced_f0))
     jitter_pct = float(np.mean(diffs / voiced_f0[:-1]) * 100)
 
@@ -180,13 +155,57 @@ def voice_jitter_and_formants(y: np.ndarray, sr: int) -> dict:
 
     return {
         "jitter_pct": round(jitter_pct, 2),
+        "f0_sd": round(f0_sd, 1),
         "formant_stability_cv": formant_stability,
         "interpretation": interpretation,
     }
 
 
 def _empty_voice(reason: str) -> dict:
-    return {"jitter_pct": None, "formant_stability_cv": None, "interpretation": reason}
+    return {"jitter_pct": None, "f0_sd": None, "formant_stability_cv": None, "interpretation": reason}
+
+
+_VOICE_MODEL_PATH = Path(__file__).parent / "models" / "voice_baseline.joblib"
+_voice_model_cache: dict | None = None
+
+
+def voice_tier_b(y: np.ndarray, sr: int) -> dict | None:
+    """Tier B: VOC-ALS-trained voice model (research/train_voice.py). Returns None if
+    models/voice_baseline.joblib is missing (e.g. a fresh clone/deploy) - callers must
+    fall back to voice_jitter_and_formants (Tier C heuristic) in that case."""
+    global _voice_model_cache
+    if _voice_model_cache is None:
+        if not _VOICE_MODEL_PATH.exists():
+            return None
+        import joblib
+
+        # joblib.load is pickle-based; safe here because this file is produced locally
+        # by research/train_voice.py (gitignored, never user-uploaded or fetched over the network).
+        _voice_model_cache = joblib.load(_VOICE_MODEL_PATH)
+
+    from research.voice_features import extract_features
+
+    feats = extract_features(y, sr)
+    cols = _voice_model_cache["feature_cols"]
+    if any(feats[c] is None for c in cols):
+        return None
+    x = np.array([[feats[c] for c in cols]])
+    proba = float(_voice_model_cache["model"].predict_proba(x)[0, 1])
+    return {
+        "risk_probability": round(proba, 3),
+        "tier": "B",
+        "source": (
+            "VOC-ALS n=153 subjects, 1224 recordings, subject-level CV AUC 0.64 "
+            "(95% CI 0.57-0.71), sens 0.90, spec 0.19 at default threshold - "
+            "rank-ordering signal, not a screening cutoff (research/train_voice.py)"
+        ),
+        "caveat": (
+            "Trained on VOC-ALS's smartphone recordings; this clip's sample rate may "
+            "differ. External check on TORGO (different mic, mixed ALS/CP etiology): "
+            "AUC dropped to 0.54, near chance - a real domain-shift limit, not "
+            "resolved (research/score_torgo.py)."
+        ),
+    }
 
 
 def _formants_from_frame(frame: np.ndarray, sr: int, order: int) -> list[float]:
@@ -209,10 +228,19 @@ def demo() -> None:
 
     steady = voice_jitter_and_formants(0.5 * np.sin(2 * np.pi * 150 * t), sr)
     assert steady["jitter_pct"] < 1.0, steady
+    assert steady["f0_sd"] < 5, steady
     assert "stable" in steady["interpretation"], steady
 
     wobbly = voice_jitter_and_formants(0.5 * np.sin(2 * np.pi * (150 + 3 * np.sin(2 * np.pi * 10 * t)) * t), sr)
     assert wobbly["jitter_pct"] > steady["jitter_pct"], wobbly
+    assert wobbly["f0_sd"] > steady["f0_sd"], wobbly
+
+    tier_b = voice_tier_b(0.5 * np.sin(2 * np.pi * 150 * t), sr)
+    if _VOICE_MODEL_PATH.exists():
+        assert tier_b is not None and 0 <= tier_b["risk_probability"] <= 1, tier_b
+        assert tier_b["caveat"], tier_b
+    else:
+        assert tier_b is None, tier_b
 
     steady_lips = lip_velocity([(i * 0.03, 0.3, 0.5, 0.7, 0.5) for i in range(10)])
     assert steady_lips["mean_velocity"] == 0.0, steady_lips
