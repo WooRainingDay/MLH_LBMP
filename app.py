@@ -58,7 +58,7 @@ if flag and flag["date"]:
             st.markdown(f"- {reason}")
         st.info(rules["advice"]["high"])
 
-    alert_audio = generate_alert(flag["date"], months)
+    alert_audio = generate_alert(flag["date"], months, flag["gold_coast"])
     if alert_audio is not None:
         st.audio(alert_audio, format="audio/mp3", autoplay=True)
         st.caption("The call that never came - played aloud, same numbers as the banner above.")

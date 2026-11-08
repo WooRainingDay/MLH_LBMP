@@ -27,22 +27,20 @@ def _api_key() -> str | None:
     return os.getenv("ELEVENLABS_API_KEY")
 
 
-def _alert_text(date: str, months: float | None) -> str:
+def _alert_text(date: str, months: float | None, gold_coast: bool) -> str:
     months_clause = f" That is {months} months before the eventual diagnosis." if months is not None else ""
-    return (
-        "Urgent neurology referral advised. "
-        f"Pattern consistent with Gold Coast criteria, first flagged {date}.{months_clause}"
-    )
+    pattern_clause = " Pattern consistent with Gold Coast criteria." if gold_coast else ""
+    return f"Urgent neurology referral advised, first flagged {date}.{pattern_clause}{months_clause}"
 
 
-def generate_alert(date: str, months: float | None) -> bytes | None:
+def generate_alert(date: str, months: float | None, gold_coast: bool) -> bytes | None:
     """Returns mp3 bytes, or None if ELEVENLABS_API_KEY is unset (caller falls back
     to silence - same posture as extract.py's offline mode when GEMINI_API_KEY is unset)."""
     api_key = _api_key()
     if not api_key:
         return None
 
-    text = _alert_text(date, months)
+    text = _alert_text(date, months, gold_coast)
     cache_key = hashlib.sha256(text.encode()).hexdigest()[:16]
     cache_path = CACHE_DIR / f"{cache_key}.mp3"
     if cache_path.exists():
@@ -65,12 +63,14 @@ def generate_alert(date: str, months: float | None) -> bytes | None:
 
 
 def demo() -> None:
-    assert "urgent" in _alert_text("2026-02-10", 5.1).lower()
-    assert "That is 5.1 months" in _alert_text("2026-02-10", 5.1)
-    assert "before the eventual diagnosis" not in _alert_text("2026-02-10", None)
+    assert "urgent" in _alert_text("2026-02-10", 5.1, True).lower()
+    assert "That is 5.1 months" in _alert_text("2026-02-10", 5.1, True)
+    assert "before the eventual diagnosis" not in _alert_text("2026-02-10", None, True)
+    assert "Gold Coast" in _alert_text("2026-02-10", 5.1, True)
+    assert "Gold Coast" not in _alert_text("2026-02-10", 5.1, False)
 
     if not _api_key():
-        assert generate_alert("2026-02-10", 5.1) is None
+        assert generate_alert("2026-02-10", 5.1, True) is None
 
     print("elevenlabs_alert.py: all checks passed")
 
