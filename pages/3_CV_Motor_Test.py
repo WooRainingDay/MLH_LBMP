@@ -71,14 +71,21 @@ else:
 
             self.landmarker = new_landmarker(mp.tasks.vision.RunningMode.VIDEO)
             self.start_time = time.time()
+            self.last_timestamp_ms = -1
             self.samples: queue.Queue = queue.Queue()
+
+        def __del__(self) -> None:
+            self.landmarker.close()
 
         def recv(self, frame):
             import cv2
             import mediapipe as mp
 
             img = frame.to_ndarray(format="bgr24")
-            timestamp_ms = int((time.time() - self.start_time) * 1000)
+            # MediaPipe VIDEO mode requires strictly increasing timestamps; wall-clock
+            # alone isn't guaranteed to advance between two frames under WebRTC jitter.
+            timestamp_ms = max(int((time.time() - self.start_time) * 1000), self.last_timestamp_ms + 1)
+            self.last_timestamp_ms = timestamp_ms
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
             result = self.landmarker.detect_for_video(mp_image, timestamp_ms)
             sample = extract_hand_sample(result, timestamp_ms / 1000)
