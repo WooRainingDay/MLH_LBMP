@@ -21,11 +21,17 @@ Target length: **3 minutes** at the judging table (Sun 1:30–3:00 PM, MCCD 7110
 | 3 | Stop at the first **HIGH** risk note | Banner: first flagged date, and "<N> months before diagnosis". N must come from `evaluate.py`, not from memory |
 | 4 | Open the reasons panel for that note | Points breakdown, Gold Coast status, and advice: urgent neurology referral, request EMG, consider serum NfL |
 | 5 | Load the carpal-tunnel mimic note | Risk **LOW**: numbness/tingling and positive Phalen's point away from ALS |
-| 6 | Close: limits and next step | n=1 fictional case; invented test notes; next: retrospective validation on real referral letters |
+| 6 | Optional stretch: open **CV Motor Test**, upload a finger-tapping clip; open **Bulbar Voice Test**, upload a speech clip + a sustained-vowel clip (`data/motor_samples/`) | MediaPipe hand/face tracking + librosa pitch/formant readouts render, explicitly labeled exploratory and separate from ALS RedFlag's clinical score |
+| 7 | Close: limits and next step | n=1 fictional case; invented test notes; next: retrospective validation on real referral letters |
 
 ## Seeded data and reset
 
 - Patient notes: `data/alex/*.txt` (typed from the case file), `data/sample/*.txt` (invented patient for tests).
+- Step 6 (motor/bulbar stretch): **not yet recorded.** Before judging, record a ~15-30s
+  finger-tapping clip and a ~3-5s sustained-vowel ("ahhh") clip and a short speech clip,
+  save to `data/motor_samples/` (gitignored by nothing — commit real sample clips before
+  judging so the demo doesn't depend on live capture). The first run of each page downloads
+  a MediaPipe model bundle (needs network once); after that it's cached in `.cache/models/`.
 - Gemini results are cached in `.cache/extract/`. To force a fresh run: `rm -rf .cache/extract`.
 - Before judging: run the demo once with the key set so every note is cached; then the demo works even if the network or quota fails.
 - Reset UI state: restart Streamlit (`Ctrl+C`, then `streamlit run app.py`).
