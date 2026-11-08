@@ -22,7 +22,7 @@ Target length: **3 minutes** at the judging table (Sun 1:30–3:00 PM, MCCD 7110
 | 4 | Open the reasons panel for that note | Points breakdown, Gold Coast status, and advice: urgent neurology referral, request EMG, consider serum NfL |
 | 5 | Load the carpal-tunnel mimic note | Risk **LOW**: numbness/tingling and positive Phalen's point away from ALS |
 | 6 | Optional stretch: open **CV Motor Test**, upload a finger-tapping clip; open **Bulbar Voice Test**, upload a speech clip + a sustained-vowel clip (`data/motor_samples/`) | MediaPipe hand/face tracking + librosa pitch/formant readouts render, explicitly labeled exploratory and separate from ALS RedFlag's clinical score. Bulbar Voice Test also shows a **Tier B** score from a model trained and cross-validated on the public VOC-ALS dataset (n=153 subjects, 1224 recordings, subject-level CV AUC 0.64 [95% CI 0.57-0.71], sens 0.90, spec 0.19 - `python research/report.py` reproduces every number), with full source, the specificity/CI caveat, AND a domain-shift note (trained on VOC-ALS's smartphone recordings, not resampled to match the browser mic) cited on screen - answers "how do you know it works?" for this stretch feature specifically, honestly |
-| 7 | Close: limits and next step | n=1 fictional case; invented test notes; next: retrospective validation on real referral letters |
+| 7 | Close: limits and next step | n=1 fictional case; invented test notes; next: retrospective validation on real referral letters, and a findings report patients/clinicians could save to their phone (would need PHI/Health Canada clearance - not built) |
 
 ## Seeded data and reset
 
