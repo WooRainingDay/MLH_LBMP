@@ -193,6 +193,39 @@ def _empty_voice(reason: str) -> dict:
     return {"jitter_pct": None, "f0_sd": None, "formant_stability_cv": None, "interpretation": reason}
 
 
+_VOICE_MODEL_PATH = Path(__file__).parent / "models" / "voice_baseline.joblib"
+_voice_model_cache: dict | None = None
+
+
+def voice_tier_b(y: np.ndarray, sr: int) -> dict | None:
+    """Tier B: VOC-ALS-trained voice model (research/train_voice.py). Returns None if
+    models/voice_baseline.joblib is missing (e.g. a fresh clone/deploy) - callers must
+    fall back to voice_jitter_and_formants (Tier C heuristic) in that case."""
+    global _voice_model_cache
+    if _voice_model_cache is None:
+        if not _VOICE_MODEL_PATH.exists():
+            return None
+        import joblib
+
+        # joblib.load is pickle-based; safe here because this file is produced locally
+        # by research/train_voice.py (gitignored, never user-uploaded or fetched over the network).
+        _voice_model_cache = joblib.load(_VOICE_MODEL_PATH)
+
+    from research.voice_features import extract_features
+
+    feats = extract_features(y, sr)
+    cols = _voice_model_cache["feature_cols"]
+    if any(feats[c] is None for c in cols):
+        return None
+    x = np.array([[feats[c] for c in cols]])
+    proba = float(_voice_model_cache["model"].predict_proba(x)[0, 1])
+    return {
+        "risk_probability": round(proba, 3),
+        "tier": "B",
+        "source": "VOC-ALS n=1224, subject-level CV AUC 0.64 (research/train_voice.py)",
+    }
+
+
 def _formants_from_frame(frame: np.ndarray, sr: int, order: int) -> list[float]:
     """LPC-root formant estimate for one audio frame. Returns ascending frequencies (Hz)."""
     if not np.any(frame):
@@ -219,6 +252,12 @@ def demo() -> None:
     wobbly = voice_jitter_and_formants(0.5 * np.sin(2 * np.pi * (150 + 3 * np.sin(2 * np.pi * 10 * t)) * t), sr)
     assert wobbly["jitter_pct"] > steady["jitter_pct"], wobbly
     assert wobbly["f0_sd"] > steady["f0_sd"], wobbly
+
+    tier_b = voice_tier_b(0.5 * np.sin(2 * np.pi * 150 * t), sr)
+    if _VOICE_MODEL_PATH.exists():
+        assert tier_b is not None and 0 <= tier_b["risk_probability"] <= 1, tier_b
+    else:
+        assert tier_b is None, tier_b
 
     steady_lips = lip_velocity([(i * 0.03, 0.3, 0.5, 0.7, 0.5) for i in range(10)])
     assert steady_lips["mean_velocity"] == 0.0, steady_lips

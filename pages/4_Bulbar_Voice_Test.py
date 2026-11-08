@@ -25,6 +25,7 @@ from motor_face_audio import (
     lip_velocity,
     new_face_landmarker,
     voice_jitter_and_formants,
+    voice_tier_b,
 )
 
 st.set_page_config(page_title="Bulbar/voice test", page_icon="🗣️")
@@ -47,14 +48,23 @@ def render_lip_result(result: dict) -> None:
     st.write(result["interpretation"])
 
 
-def render_voice_result(result: dict) -> None:
+def render_voice_result(y: np.ndarray, sr: int) -> None:
+    result = voice_jitter_and_formants(y, sr)
     if result["jitter_pct"] is None:
         st.warning(result["interpretation"])
         return
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     col1.metric("Pitch jitter", f"{result['jitter_pct']}%")
-    col2.metric("Formant stability (CV)", result["formant_stability_cv"])
+    col2.metric("F0 SD (Hz)", result["f0_sd"])
+    col3.metric("Formant stability (CV)", result["formant_stability_cv"])
     st.write(result["interpretation"])
+
+    tier_b = voice_tier_b(y, sr)
+    if tier_b is not None:
+        st.metric("Tier B - trained-model ALS risk", tier_b["risk_probability"])
+        st.caption(f"Tier B ({tier_b['source']}). Decision support only, not a diagnosis.")
+    else:
+        st.caption("Tier C (heuristic only) - no trained voice model found locally.")
 
 
 mode = st.radio("Capture method", ["Upload clips", "Live camera + mic"], horizontal=True)
@@ -82,7 +92,7 @@ if mode == "Upload clips":
             audio_path = tmp.name
         with st.spinner("Analyzing pitch and formants..."):
             y, sr = librosa.load(audio_path)
-            render_voice_result(voice_jitter_and_formants(y, sr))
+            render_voice_result(y, sr)
 
 else:
     st.caption(
@@ -159,6 +169,6 @@ else:
 
         if ctx.audio_processor.chunks:
             y = np.concatenate(ctx.audio_processor.chunks)
-            render_voice_result(voice_jitter_and_formants(y, ctx.audio_processor.sample_rate))
+            render_voice_result(y, ctx.audio_processor.sample_rate)
         else:
             st.warning("No audio captured yet.")
