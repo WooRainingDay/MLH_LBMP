@@ -75,10 +75,16 @@ Each step is one commit on `feat/data-models`.
    `voice_features.py`. Add `f0_sd` to `motor_face_audio.py`.
 2. **Voice baseline.** `train_voice.py`. Check: does F0 SD alone reproduce the
    paper's finding? This guards against bugs in our own pipeline.
-3. **Voice external check.** Score TORGO with the frozen baseline. A large drop
-   from the CV score means domain shift, and the UI wording must say so.
-4. **Voice SSL.** `train_voice_ssl.py`. Ship it only if it beats the baseline
-   on CV *and* on TORGO. Otherwise keep the simpler model.
+3. **Voice external check.** DONE - `research/score_torgo.py`. TORGO (8092
+   recordings, 8 dysarthric + 7 control speakers, all 4 archives): AUC 0.544,
+   down from VOC-ALS's CV AUC 0.64. A large drop, confirming real domain shift
+   (different mic, mixed ALS/CP etiology). Stated in the UI's Tier B caveat
+   and `docs/DEMO.md`, not hidden.
+4. **Voice SSL.** Skipped for this hackathon: the baseline's TORGO AUC (0.544)
+   is near chance, so there is no credible "beats TORGO" bar for an SSL model
+   to clear yet, and torch/transformers are heavy for the remaining time
+   budget. Revisit once more labelled data (TORGO per-speaker etiology,
+   Answer ALS) narrows what "better" would mean.
 5. **Face + motor calibration.** `calibrate_face.py` (NeuroFace) and
    `calibrate_motor.py` (Gait now, Answer ALS / DNE-113 when access arrives).
    Replace the `ponytail:` cutoffs.

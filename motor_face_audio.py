@@ -227,7 +227,12 @@ def voice_tier_b(y: np.ndarray, sr: int) -> dict | None:
             "(95% CI 0.57-0.71), sens 0.90, spec 0.19 at default threshold - "
             "rank-ordering signal, not a screening cutoff (research/train_voice.py)"
         ),
-        "caveat": "Trained on VOC-ALS's smartphone recordings; this clip's sample rate may differ.",
+        "caveat": (
+            "Trained on VOC-ALS's smartphone recordings; this clip's sample rate may "
+            "differ. External check on TORGO (different mic, mixed ALS/CP etiology): "
+            "AUC dropped to 0.54, near chance - a real domain-shift limit, not "
+            "resolved (research/score_torgo.py)."
+        ),
     }
 
 

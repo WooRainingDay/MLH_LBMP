@@ -38,9 +38,14 @@ def main() -> None:
 
     print()
     print("=" * 70)
+    print("TORGO external check (research/score_torgo.py)")
+    print("=" * 70)
+    print(_run([sys.executable, "research/score_torgo.py"]) or "(not run: TORGO data missing)")
+
+    print()
+    print("=" * 70)
     print("NOT YET RUN")
     print("=" * 70)
-    print("- TORGO external check (plan Step 3): pending TORGO download")
     print("- NeuroFace lip-velocity calibration (plan Step 5): access pending")
     print("- Answer ALS / DNE-113 finger-tap calibration (plan Step 5): access pending")
 
