@@ -28,11 +28,11 @@ n = len(st.session_state.tap_times)
 
 col1, col2 = st.columns(2)
 with col1:
-    if st.button("Tap", use_container_width=True, disabled=n >= TARGET_TAPS):
+    if st.button("Tap", width="stretch", disabled=n >= TARGET_TAPS):
         st.session_state.tap_times.append(time.time())
         st.rerun()
 with col2:
-    if st.button("Reset", use_container_width=True):
+    if st.button("Reset", width="stretch"):
         st.session_state.tap_times = []
         st.rerun()
 

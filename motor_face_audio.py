@@ -29,6 +29,12 @@ MODEL_PATH = Path(".cache/models/face_landmarker.task")
 LEFT_LIP_CORNER = 61
 RIGHT_LIP_CORNER = 291
 
+# ponytail: unvalidated heuristics, not clinical cutoffs. Upgrade path: calibrate
+# against real sustained-vowel voice-pathology and speech lip-tracking norms.
+JITTER_FLAG_PCT = 1.0
+FORMANT_FLAG_CV = 0.15
+LIP_FLAG_CV = 0.6
+
 
 def _ensure_model() -> Path:
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -90,10 +96,8 @@ def lip_velocity(samples: list[tuple[float, float, float, float, float]]) -> dic
     mean_v = statistics.mean(velocities)
     cv = (statistics.pstdev(velocities) / mean_v) if mean_v else 0.0
 
-    # ponytail: threshold below is an unvalidated heuristic, not a clinical cutoff.
-    # Upgrade path: calibrate against real speech lip-tracking norms.
     interpretation = (
-        "Lip-corner movement variability is elevated." if cv > 0.6
+        "Lip-corner movement variability is elevated." if cv > LIP_FLAG_CV
         else "Lip-corner movement stayed within a typical range."
     )
     return {
@@ -144,12 +148,10 @@ def voice_jitter_and_formants(y: np.ndarray, sr: int) -> dict:
     else:
         note = " (not enough voiced frames to estimate formant stability)"
 
-    # ponytail: thresholds below are unvalidated heuristics, not clinical cutoffs.
-    # Upgrade path: calibrate against real sustained-vowel voice-pathology norms.
     flags = []
-    if jitter_pct > 1.0:
+    if jitter_pct > JITTER_FLAG_PCT:
         flags.append("elevated pitch jitter")
-    if formant_stability is not None and formant_stability > 0.15:
+    if formant_stability is not None and formant_stability > FORMANT_FLAG_CV:
         flags.append("unstable formants")
     interpretation = ("; ".join(flags) if flags else "Pitch and formants stayed stable.") + note
 
