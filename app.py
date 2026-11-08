@@ -10,6 +10,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from elevenlabs_alert import generate_alert
 from score import load_rules
 from timeline import first_flag, months_between, run_timeline
 
@@ -56,6 +57,11 @@ if flag and flag["date"]:
         for reason in flag["reasons"]:
             st.markdown(f"- {reason}")
         st.info(rules["advice"]["high"])
+
+    alert_audio = generate_alert(flag["date"], months)
+    if alert_audio is not None:
+        st.audio(alert_audio, format="audio/mp3", autoplay=True)
+        st.caption("The call that never came - played aloud, same numbers as the banner above.")
 else:
     st.success("Never reached HIGH risk in this note set.", icon="✅")
 
