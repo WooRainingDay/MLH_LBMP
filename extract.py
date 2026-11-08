@@ -137,10 +137,19 @@ _KEYWORDS: dict[str, list[str]] = {
 _SENSORY_NORMAL = [r"sensation (is |was )?(intact|normal|preserved)", r"(normal|intact) sensation",
                    r"sensory (exam(ination)? )?(is |was )?normal"]
 _NCS_SENSORY_NORMAL = [r"sensory (nerve )?conduction(s| studies)? (is |are |were )?normal", r"normal sensory (nerve )?(conduction|responses|studies)",
-                       r"sensory (responses|potentials|amplitudes) (are |were )?normal"]
-_NCS_SENSORY_ABNORMAL = [r"sensory (nerve )?conduction(s| studies)? (is |are |were )?(abnormal|reduced|slowed|prolonged)"]
+                       r"sensory (responses|potentials|amplitudes) (are |were )?normal",
+                       # "median sensory and motor latencies within normal limits", "Sensory studies, median, sural: all normal"
+                       r"sensory[^.;]{0,30}(latenc|conduction|amplitude|stud|respons|potential|snap)[^.;]{0,40}(within normal limits|normal)"]
+_NCS_SENSORY_ABNORMAL = [r"sensory (nerve )?conduction(s| studies)? (is |are |were )?(abnormal|reduced|slowed|prolonged)",
+                         r"sensory[^.;]{0,30}(latenc|conduction|amplitude|respons|potential|snap)[^.;]{0,30}(prolonged|slowed|delayed|reduced|absent|abnormal)",
+                         r"(slowing|delay) (across|at) the (carpal tunnel|wrist|elbow)"]
 _WEAK = re.compile(r"weak|\bdropp(ing|ed|s)\b|tires? (quickly|easily)|difficulty (gripping|buttoning|doing up|opening)|"
-                   r"trouble (gripping|doing up)|grip|foot drop|tripping|slurr|4/5|3/5")
+                   r"trouble (gripping|doing up)|grip|foot drop|tripping|catch(es|ing) on|dragg(ing|s)|slurr|"
+                   r"[0-4]/5|[0-4] out of 5")
+# Treatment aimed at a local cause (wrist, neck, nerve), and a later "it didn't help"
+_LOCAL_TREATMENT = re.compile(r"surgery|release|decompression|splint|injection|physio|brace|orthotic", re.I)
+_NO_BETTER = [r"no (improvement|benefit|better)", r"not (any )?better", r"(hand|arm|leg|foot|grip|weakness) is (now )?(weaker|worse)",
+              r"if anything[^.;]{0,30}(weaker|worse)"]
 _PLACE = re.compile(r"\b(?:(left|right)\s+)?(hand|thumb|fingers?|wrist|forearm|arm|shoulder|grip|foot|ankle|leg|thigh|hip|"
                     r"knee|calf|toes?|speech|tongue|swallow\w*|neck)\b")
 _NEGATION = re.compile(r"\b(no|not|denies|denied|without|absent|negative for|nil|never|free of)\b[^.;]{0,40}$")
@@ -200,6 +209,13 @@ def extract_offline(note: str) -> dict:
     elif ok:
         f["normal_sensory_nerve_tests"] = True
         evidence.append({"field": "normal_sensory_nerve_tests", "quote": q1})
+
+    # "Surgery 20 January 2025 ... He reports no improvement": the two halves are in different sentences
+    if f["failed_local_treatment"] is not True and _LOCAL_TREATMENT.search(note):
+        worse, q = _match(_NO_BETTER, sentences)
+        if worse:
+            f["failed_local_treatment"] = True
+            evidence.append({"field": "failed_local_treatment", "quote": q})
 
     # Weakness regions: places named in sentences that describe weakness
     regions: list[str] = []

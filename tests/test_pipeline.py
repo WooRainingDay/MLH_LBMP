@@ -51,3 +51,24 @@ def test_sample_timeline_flags_before_neurology():
     assert set(steps[0]) >= {"date", "risk", "points"}
     flag = first_flag(steps)
     assert flag is not None and flag["date"] < "2025-03-18"
+
+
+def test_hand_surgery_wording():
+    """Alex's Dec 2024 and Apr 2025 notes, as the hand surgeon wrote them."""
+    dec = extract_offline("Six months of right hand weakness affecting fine tasks, no sensory symptoms. "
+                          "Nerve conduction across the right wrist: median sensory and motor latencies within "
+                          "normal limits; no slowing across the carpal tunnel. Visible wasting of the right thenar "
+                          "muscles. Grip 4 out of 5 on the right.")
+    assert dec["normal_sensory_nerve_tests"] is True
+    assert dec["sensory_symptoms"] is False
+    apr = extract_offline("Surgery 20 January 2025, uncomplicated. He reports no improvement. "
+                          "He has also begun to mention his right foot catching on stairs.")
+    assert apr["failed_local_treatment"] is True
+    assert "right foot" in apr["weakness_regions"]
+
+
+def test_real_carpal_tunnel_nerve_test_is_not_normal():
+    f = extract_offline("Numbness in the right thumb at night. Median sensory latency prolonged at the wrist, "
+                        "with slowing across the carpal tunnel.")
+    assert f["normal_sensory_nerve_tests"] is False
+    assert score(f)["risk"] == "low"
