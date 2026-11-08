@@ -222,7 +222,11 @@ def voice_tier_b(y: np.ndarray, sr: int) -> dict | None:
     return {
         "risk_probability": round(proba, 3),
         "tier": "B",
-        "source": "VOC-ALS n=1224, subject-level CV AUC 0.64 (research/train_voice.py)",
+        "source": (
+            "VOC-ALS n=153 subjects, 1224 recordings, subject-level CV AUC 0.64, "
+            "spec 0.19 at default threshold - rank-ordering signal, not a screening "
+            "cutoff (research/train_voice.py)"
+        ),
     }
 
 
