@@ -6,9 +6,9 @@ Micro-Movement & Audio Dynamics), not part of ALS RedFlag's clinical scoring
 during speech (MediaPipe FaceLandmarker) and pitch perturbation + formant
 stability in a sustained-vowel recording (librosa).
 
-    from motor_face_audio import load_face_landmarks, lip_velocity, voice_jitter_and_formants
-    lip_velocity(load_face_landmarks("speech.mp4"))
-    voice_jitter_and_formants(y, sr)  # y, sr from librosa.load(...)
+    from motor_face_audio import lip_velocity, voice_jitter_and_formants
+    lip_velocity(face_samples)  # face_samples from extract_lip_sample(), live-camera only
+    voice_jitter_and_formants(y, sr)  # y, sr from a live-captured audio array
 """
 from __future__ import annotations
 
@@ -45,8 +45,7 @@ def _ensure_model() -> Path:
 
 def extract_lip_sample(result, timestamp_s: float) -> tuple[float, float, float, float, float] | None:
     """Pulls (timestamp_s, left_corner_x, left_corner_y, right_corner_x, right_corner_y)
-    out of one FaceLandmarker result, or None if no face was detected this frame. Shared
-    by the upload (file) path and the live-camera path."""
+    out of one FaceLandmarker result, or None if no face was detected this frame."""
     if not result.face_landmarks:
         return None
     face = result.face_landmarks[0]
@@ -55,8 +54,7 @@ def extract_lip_sample(result, timestamp_s: float) -> tuple[float, float, float,
 
 
 def new_face_landmarker(running_mode):
-    """A ready-to-use FaceLandmarker for the given running_mode. Both the upload path
-    and the live-camera path use VIDEO mode (see motor_live.py)."""
+    """A ready-to-use FaceLandmarker for the given running_mode (live-camera uses VIDEO)."""
     import mediapipe as mp
 
     return mp.tasks.vision.FaceLandmarker.create_from_options(
@@ -66,32 +64,6 @@ def new_face_landmarker(running_mode):
             num_faces=1,
         )
     )
-
-
-def load_face_landmarks(video_path: str) -> list[tuple[float, float, float, float, float]]:
-    """Returns (timestamp_s, left_corner_x, left_corner_y, right_corner_x, right_corner_y)
-    per frame with a detected face."""
-    import cv2
-    import mediapipe as mp
-
-    samples: list[tuple[float, float, float, float, float]] = []
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    with new_face_landmarker(mp.tasks.vision.RunningMode.VIDEO) as landmarker:
-        frame_idx = 0
-        while True:
-            ok, frame = cap.read()
-            if not ok:
-                break
-            timestamp_ms = int(frame_idx / fps * 1000)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            result = landmarker.detect_for_video(mp_image, timestamp_ms)
-            sample = extract_lip_sample(result, timestamp_ms / 1000)
-            if sample:
-                samples.append(sample)
-            frame_idx += 1
-    cap.release()
-    return samples
 
 
 def lip_velocity(samples: list[tuple[float, float, float, float, float]]) -> dict:
