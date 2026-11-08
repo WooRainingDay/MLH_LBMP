@@ -136,8 +136,11 @@ def _score(intervals_ms: list[float]) -> dict:
     slope = num / den if den else 0.0
 
     # ponytail: thresholds below are an unvalidated heuristic, not a clinical cutoff
-    # (no UPDRS-style tapping norms baked in). Upgrade path: calibrate against real
-    # finger-tapping-test data before using for anything beyond an exploratory demo.
+    # (no UPDRS-style tapping norms baked in). The jitter_cv *method* is validated on
+    # real ALS gait data (ALS 0.429 vs control 0.044, research/calibrate_motor.py) -
+    # but that's stride interval, not finger tap. Upgrade path: calibrate the 0.3/15
+    # cutoffs against real finger-tapping-test data (Answer ALS / DNE-113, access
+    # pending per docs/plans/als-data-models.md) before using beyond an exploratory demo.
     flags = []
     if jitter_cv > 0.3:
         flags.append("high tap-to-tap jitter")
