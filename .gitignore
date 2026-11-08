@@ -7,7 +7,7 @@ __pycache__/
 venv/
 .streamlit/secrets.toml
 data/external/
-models/*.pt
+models/
 
 # Claude Code (per-person)
 .claude/settings.local.json
