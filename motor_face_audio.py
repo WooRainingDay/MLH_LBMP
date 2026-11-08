@@ -139,15 +139,18 @@ def _empty_lip(reason: str) -> dict:
 def voice_jitter_and_formants(y: np.ndarray, sr: int) -> dict:
     """y, sr: a sustained-vowel recording from librosa.load(...).
 
-    Returns {"jitter_pct", "formant_stability_cv", "interpretation"}. Jitter is the mean
-    relative frame-to-frame change in pitch period (librosa.pyin). Formant stability is
-    the frame-to-frame variability of the two lowest LPC-root resonances (F1/F2 proxy).
+    Returns {"jitter_pct", "f0_sd", "formant_stability_cv", "interpretation"}. Jitter is the
+    mean relative frame-to-frame change in pitch period (librosa.pyin). f0_sd is the pitch
+    standard deviation in Hz, the strongest single ALS discriminator in the VOC-ALS study
+    (research/voice_features.py). Formant stability is the frame-to-frame variability of the
+    two lowest LPC-root resonances (F1/F2 proxy).
     """
     f0, voiced_flag, _ = librosa.pyin(y, sr=sr, fmin=librosa.note_to_hz("C2"), fmax=librosa.note_to_hz("C7"))
     voiced_f0 = f0[voiced_flag]
     if len(voiced_f0) < 5:
         return _empty_voice("Not enough sustained voiced sound detected in this clip.")
 
+    f0_sd = float(np.std(voiced_f0))
     diffs = np.abs(np.diff(voiced_f0))
     jitter_pct = float(np.mean(diffs / voiced_f0[:-1]) * 100)
 
@@ -180,13 +183,14 @@ def voice_jitter_and_formants(y: np.ndarray, sr: int) -> dict:
 
     return {
         "jitter_pct": round(jitter_pct, 2),
+        "f0_sd": round(f0_sd, 1),
         "formant_stability_cv": formant_stability,
         "interpretation": interpretation,
     }
 
 
 def _empty_voice(reason: str) -> dict:
-    return {"jitter_pct": None, "formant_stability_cv": None, "interpretation": reason}
+    return {"jitter_pct": None, "f0_sd": None, "formant_stability_cv": None, "interpretation": reason}
 
 
 def _formants_from_frame(frame: np.ndarray, sr: int, order: int) -> list[float]:
@@ -209,10 +213,12 @@ def demo() -> None:
 
     steady = voice_jitter_and_formants(0.5 * np.sin(2 * np.pi * 150 * t), sr)
     assert steady["jitter_pct"] < 1.0, steady
+    assert steady["f0_sd"] < 5, steady
     assert "stable" in steady["interpretation"], steady
 
     wobbly = voice_jitter_and_formants(0.5 * np.sin(2 * np.pi * (150 + 3 * np.sin(2 * np.pi * 10 * t)) * t), sr)
     assert wobbly["jitter_pct"] > steady["jitter_pct"], wobbly
+    assert wobbly["f0_sd"] > steady["f0_sd"], wobbly
 
     steady_lips = lip_velocity([(i * 0.03, 0.3, 0.5, 0.7, 0.5) for i in range(10)])
     assert steady_lips["mean_velocity"] == 0.0, steady_lips

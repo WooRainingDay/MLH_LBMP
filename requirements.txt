@@ -8,3 +8,5 @@ opencv-python>=4.9
 mediapipe>=0.10
 librosa>=0.10
 streamlit-webrtc>=0.79
+synapseclient>=4.0
+praat-parselmouth>=0.4
