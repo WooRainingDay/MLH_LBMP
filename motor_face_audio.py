@@ -43,21 +43,41 @@ def _ensure_model() -> Path:
     return MODEL_PATH
 
 
+def extract_lip_sample(result, timestamp_s: float) -> tuple[float, float, float, float, float] | None:
+    """Pulls (timestamp_s, left_corner_x, left_corner_y, right_corner_x, right_corner_y)
+    out of one FaceLandmarker result, or None if no face was detected this frame. Shared
+    by the upload (file) path and the live-camera path."""
+    if not result.face_landmarks:
+        return None
+    face = result.face_landmarks[0]
+    left, right = face[LEFT_LIP_CORNER], face[RIGHT_LIP_CORNER]
+    return (timestamp_s, left.x, left.y, right.x, right.y)
+
+
+def new_face_landmarker(running_mode):
+    """A ready-to-use FaceLandmarker for the given running_mode. Both the upload path
+    and the live-camera path use VIDEO mode (see motor_live.py)."""
+    import mediapipe as mp
+
+    return mp.tasks.vision.FaceLandmarker.create_from_options(
+        mp.tasks.vision.FaceLandmarkerOptions(
+            base_options=mp.tasks.BaseOptions(model_asset_path=str(_ensure_model())),
+            running_mode=running_mode,
+            num_faces=1,
+        )
+    )
+
+
 def load_face_landmarks(video_path: str) -> list[tuple[float, float, float, float, float]]:
     """Returns (timestamp_s, left_corner_x, left_corner_y, right_corner_x, right_corner_y)
     per frame with a detected face."""
     import cv2
     import mediapipe as mp
 
-    options = mp.tasks.vision.FaceLandmarkerOptions(
-        base_options=mp.tasks.BaseOptions(model_asset_path=str(_ensure_model())),
-        running_mode=mp.tasks.vision.RunningMode.VIDEO,
-        num_faces=1,
-    )
     samples: list[tuple[float, float, float, float, float]] = []
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    with mp.tasks.vision.FaceLandmarker.create_from_options(options) as landmarker:
+    with new_face_landmarker(mp.tasks.vision.RunningMode.VIDEO) as landmarker:
         frame_idx = 0
         while True:
             ok, frame = cap.read()
@@ -66,10 +86,9 @@ def load_face_landmarks(video_path: str) -> list[tuple[float, float, float, floa
             timestamp_ms = int(frame_idx / fps * 1000)
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             result = landmarker.detect_for_video(mp_image, timestamp_ms)
-            if result.face_landmarks:
-                face = result.face_landmarks[0]
-                left, right = face[LEFT_LIP_CORNER], face[RIGHT_LIP_CORNER]
-                samples.append((timestamp_ms / 1000, left.x, left.y, right.x, right.y))
+            sample = extract_lip_sample(result, timestamp_ms / 1000)
+            if sample:
+                samples.append(sample)
             frame_idx += 1
     cap.release()
     return samples

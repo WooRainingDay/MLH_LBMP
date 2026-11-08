@@ -42,20 +42,39 @@ def _ensure_model() -> Path:
     return MODEL_PATH
 
 
+def extract_hand_sample(result, timestamp_s: float) -> tuple[float, float, float] | None:
+    """Pulls (thumb_tip_x, index_tip_x, timestamp_s) out of one HandLandmarker result,
+    or None if no hand was detected this frame. Shared by the upload (file) path and the
+    live-camera path so both feed identical samples into tap_rhythm()."""
+    if not result.hand_landmarks:
+        return None
+    hand = result.hand_landmarks[0]
+    return (hand[THUMB_TIP].x, hand[INDEX_TIP].x, timestamp_s)
+
+
+def new_landmarker(running_mode):
+    """A ready-to-use HandLandmarker for the given running_mode. Both the upload path
+    and the live-camera path use VIDEO mode (see motor_live.py)."""
+    import mediapipe as mp
+
+    return mp.tasks.vision.HandLandmarker.create_from_options(
+        mp.tasks.vision.HandLandmarkerOptions(
+            base_options=mp.tasks.BaseOptions(model_asset_path=str(_ensure_model())),
+            running_mode=running_mode,
+            num_hands=1,
+        )
+    )
+
+
 def load_hand_landmarks(video_path: str) -> list[tuple[float, float, float]]:
     """Returns (thumb_tip_x, index_tip_x, timestamp_s) per frame with a detected hand."""
     import cv2
     import mediapipe as mp
 
-    options = mp.tasks.vision.HandLandmarkerOptions(
-        base_options=mp.tasks.BaseOptions(model_asset_path=str(_ensure_model())),
-        running_mode=mp.tasks.vision.RunningMode.VIDEO,
-        num_hands=1,
-    )
     samples: list[tuple[float, float, float]] = []
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    with mp.tasks.vision.HandLandmarker.create_from_options(options) as landmarker:
+    with new_landmarker(mp.tasks.vision.RunningMode.VIDEO) as landmarker:
         frame_idx = 0
         while True:
             ok, frame = cap.read()
@@ -64,9 +83,9 @@ def load_hand_landmarks(video_path: str) -> list[tuple[float, float, float]]:
             timestamp_ms = int(frame_idx / fps * 1000)
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             result = landmarker.detect_for_video(mp_image, timestamp_ms)
-            if result.hand_landmarks:
-                hand = result.hand_landmarks[0]
-                samples.append((hand[THUMB_TIP].x, hand[INDEX_TIP].x, timestamp_ms / 1000))
+            sample = extract_hand_sample(result, timestamp_ms / 1000)
+            if sample:
+                samples.append(sample)
             frame_idx += 1
     cap.release()
     return samples
