@@ -225,10 +225,9 @@ def voice_tier_b(y: np.ndarray, sr: int) -> dict | None:
         "source": (
             "VOC-ALS n=153 subjects, 1224 recordings, subject-level CV AUC 0.64 "
             "(95% CI 0.57-0.71), sens 0.90, spec 0.19 at default threshold - "
-            "rank-ordering signal, not a screening cutoff. Trained on VOC-ALS's "
-            "smartphone recordings; this clip's sample rate may differ "
-            "(research/train_voice.py)"
+            "rank-ordering signal, not a screening cutoff (research/train_voice.py)"
         ),
+        "caveat": "Trained on VOC-ALS's smartphone recordings; this clip's sample rate may differ.",
     }
 
 
@@ -262,6 +261,7 @@ def demo() -> None:
     tier_b = voice_tier_b(0.5 * np.sin(2 * np.pi * 150 * t), sr)
     if _VOICE_MODEL_PATH.exists():
         assert tier_b is not None and 0 <= tier_b["risk_probability"] <= 1, tier_b
+        assert tier_b["caveat"], tier_b
     else:
         assert tier_b is None, tier_b
 

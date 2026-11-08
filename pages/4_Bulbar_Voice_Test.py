@@ -63,6 +63,7 @@ def render_voice_result(y: np.ndarray, sr: int) -> None:
     if tier_b is not None:
         st.metric("Tier B - trained-model ALS risk", tier_b["risk_probability"])
         st.caption(f"Tier B ({tier_b['source']}). Decision support only, not a diagnosis.")
+        st.caption(tier_b["caveat"])
     else:
         st.caption("Tier C (heuristic only) - no trained voice model found locally.")
 
